@@ -6,8 +6,13 @@ namespace SplatoonGameLibrary
 {
     public class Player
     {
-        private readonly Team PlayerTeam;
+        public readonly Team PlayerTeam;
 
+        public Player(Team myTeam)
+        {
+            PlayerTeam = myTeam;
+            
+        }
 
     }
 }
