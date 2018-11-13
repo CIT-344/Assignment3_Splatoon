@@ -18,7 +18,7 @@ namespace SplatoonGameLibrary
 
         public Team Team { get; private set; } = null;
 
-        public bool IsLocked = false;
+        public bool IsLocked = true;
 
         public DateTime LockingTime = DateTime.Now;
 

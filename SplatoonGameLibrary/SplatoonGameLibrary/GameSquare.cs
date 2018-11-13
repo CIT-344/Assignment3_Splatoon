@@ -7,6 +7,9 @@ namespace SplatoonGameLibrary
 {
     public class GameSquare
     {
+
+        public object PlayerWaiting = new object();
+
         public GameSquare(int x, int y, GameBoard board)
         {
             this.X = x;
@@ -24,24 +27,18 @@ namespace SplatoonGameLibrary
 
         public void ApplyTeamColor(Player p)
         {
-            // Apply waiting logic here
-            // Player thread will block here until the color my be changed
-            Monitor.Wait(CurrentStatus);
-            try
+            // Add something about HasPlayerWaiting to prevent multiple players from sitting here
+            lock (PlayerWaiting)
             {
-                if (Monitor.IsEntered(CurrentStatus))
-                {
-                    // Lock has been acquired I can do stuff now
-                    // Call a method to change the team holding this
-                    CurrentStatus.ChangeSquareOwnership(p.PlayerTeam);
-                }
-            }
-            catch (Exception e)
-            { }
-            finally
-            {
-                Monitor.Exit(CurrentStatus);
-                Monitor.PulseAll(CurrentStatus);
+                // Apply waiting logic here
+                // Player thread will block here until the color my be changed
+                Monitor.Enter(CurrentStatus.IsLocked);
+
+                // Lock has been acquired I can do stuff now
+                // Call a method to change the team holding this
+                CurrentStatus.ChangeSquareOwnership(p.PlayerTeam);
+
+                Monitor.Exit(CurrentStatus.IsLocked);
             }
         }
     }

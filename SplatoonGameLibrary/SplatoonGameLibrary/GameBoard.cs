@@ -4,6 +4,7 @@ using System.Text;
 using System.Linq;
 using System.Timers;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SplatoonGameLibrary
 {
@@ -11,10 +12,11 @@ namespace SplatoonGameLibrary
     {
         private readonly List<GameSquare> Squares;
 
+        private Task SimulatedTimerThread;
+        private CancellationTokenSource StopTimerRequest = new CancellationTokenSource();
+
         private List<Team> Teams;
         
-        private readonly System.Timers.Timer LockingTimer;
-
         /// <summary>
         /// Returns a grouping of players per team
         /// </summary>
@@ -56,45 +58,68 @@ namespace SplatoonGameLibrary
                 // For simple testing reasons if i is 0 their color is Yellow
                 Teams.Add(new Team(playersPerTeam, (i == 0 ? Yellow: Pink), this));
             }
-            
-            // Setup the universal locking/unlocking timer
-            LockingTimer = new System.Timers.Timer
+
+            // Spin up a thread for the simulated locking timer
+            SimulatedTimerThread = Task.Run(()=> 
             {
-                AutoReset = true,
-                Interval = 150, // Something extremely low, this timer needs to run fast enough to simulate all the blocks having timers
-                Enabled = true
-            };
-            LockingTimer.Elapsed += LockingTimerHasTicked;
+                BeginSimulatedTimer(TimeSpan.FromMilliseconds(150));
+            }, StopTimerRequest.Token);
         }
         
         public GameSquare FindNextAvailableSquare(Player p)
         {
             // Given the current player
-            // Find the next available square to travel to
-            // Will use the current players pos to attempt to find squares that are close
-            // This doesn't check for locked vs. unlocked
-            // rather will find a square that isn't already being waited on by another player
+            foreach (var sqr in Squares)
+            {
+                if (Monitor.TryEnter(sqr.PlayerWaiting))
+                {
+                    // Find the first Square that doesn't already have a player waiting
+                    // Within this condition I am locking
+                    Monitor.Exit(sqr.PlayerWaiting);
+                    return sqr;
+                }
+            }
+
             return null;
         }
 
-        private void LockingTimerHasTicked(object sender, ElapsedEventArgs e)
+        private void BeginSimulatedTimer(TimeSpan Interval)
         {
-            // ForEach square in Squares
+            while (true && !StopTimerRequest.Token.IsCancellationRequested)
+            {
+                // ForEach square in Squares
+                foreach (var sqr in Squares)
+                {
+                    if (sqr.CurrentStatus.LockingTime < DateTime.Now)
+                    {
+                        if (sqr.CurrentStatus.IsLocked)
+                        {
+                            if (Monitor.IsEntered(sqr.CurrentStatus.IsLocked))
+                            {
+                                Monitor.Exit(sqr.CurrentStatus.IsLocked);
+
+                                // Generate a new period of wait before the locking changes
+                                sqr.CurrentStatus.LockingTime = sqr.CurrentStatus.LockingTime.Add(TimeSpan.FromMilliseconds(SquareStatus.GenerateNextDelay()));
+                            }
+                        }
+                        else
+                        {
+                            Monitor.Enter(sqr.CurrentStatus.IsLocked);
+                            sqr.CurrentStatus.IsLocked = !sqr.CurrentStatus.IsLocked;
+                        }
+                    }
+                }
+
+                Thread.Sleep(Interval.Milliseconds);
+            }
+
+
             foreach (var sqr in Squares)
             {
-                if (sqr.CurrentStatus.LockingTime < DateTime.Now)
+                // Run through and if a lock is being held let it go
+                if (Monitor.IsEntered(sqr.CurrentStatus.IsLocked))
                 {
-                    // Wrap this in a lock because by doing this I can stop players from reading it while it's being updated
-                    lock (sqr.CurrentStatus)
-                    {
-                        // Their time has expired and needs changed
-                        sqr.CurrentStatus.IsLocked = !sqr.CurrentStatus.IsLocked;
-
-                        // Generate a new period of wait before the locking changes
-                        sqr.CurrentStatus.LockingTime = sqr.CurrentStatus.LockingTime.Add(TimeSpan.FromMilliseconds(SquareStatus.GenerateNextDelay()));
-                    }
-                    // Send out a notify event stating that something has changed
-                    Monitor.PulseAll(sqr.CurrentStatus);
+                    Monitor.Exit(sqr.CurrentStatus.IsLocked);
                 }
             }
         }
