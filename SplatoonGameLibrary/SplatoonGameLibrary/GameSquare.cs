@@ -24,8 +24,8 @@ namespace SplatoonGameLibrary
 
         public void ApplyTeamColor(Player p)
         {
-            // Given a player
-
+            // Apply waiting logic here
+            // Player thread will block here until the color my be changed
             Monitor.Wait(CurrentStatus);
             try
             {

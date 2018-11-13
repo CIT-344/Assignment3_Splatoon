@@ -69,7 +69,6 @@ namespace SplatoonGameLibrary
         
         public GameSquare FindNextAvailableSquare(Player p)
         {
-            
             // Given the current player
             // Find the next available square to travel to
             // Will use the current players pos to attempt to find squares that are close
@@ -83,10 +82,10 @@ namespace SplatoonGameLibrary
             // ForEach square in Squares
             foreach (var sqr in Squares)
             {
-                // Wrap this in a lock because by doing this I can stop players from reading it while it's being updated
-                lock (sqr.CurrentStatus)
+                if (sqr.CurrentStatus.LockingTime < DateTime.Now)
                 {
-                    if (sqr.CurrentStatus.LockingTime < DateTime.Now)
+                    // Wrap this in a lock because by doing this I can stop players from reading it while it's being updated
+                    lock (sqr.CurrentStatus)
                     {
                         // Their time has expired and needs changed
                         sqr.CurrentStatus.IsLocked = !sqr.CurrentStatus.IsLocked;
@@ -94,10 +93,9 @@ namespace SplatoonGameLibrary
                         // Generate a new period of wait before the locking changes
                         sqr.CurrentStatus.LockingTime = sqr.CurrentStatus.LockingTime.Add(TimeSpan.FromMilliseconds(SquareStatus.GenerateNextDelay()));
                     }
+                    // Send out a notify event stating that something has changed
+                    Monitor.PulseAll(sqr.CurrentStatus);
                 }
-
-                // Send out a notify event stating that something has changed
-                Monitor.PulseAll(sqr.CurrentStatus);
             }
         }
 
