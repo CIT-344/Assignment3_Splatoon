@@ -16,7 +16,7 @@ namespace SplatoonGameLibrary
 
         public bool IsClear { get; private set; } = true;
 
-        public Nullable<Guid> TeamID { get; private set; } = null;
+        public Team Team { get; private set; } = null;
 
         public bool IsLocked = false;
 
@@ -26,6 +26,20 @@ namespace SplatoonGameLibrary
         {
             // The delay can be between 250ms up to 1000 ms
             return SquareStatus.DelayGenerator.Next(250, 1001);
+        }
+
+        public void ChangeSquareOwnership(Team t)
+        {
+            if (t != null)
+            {
+                Team = t;
+                IsClear = false;
+            }
+            else
+            {
+                Team = null;
+                IsClear = true;
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace SplatoonGameLibrary
 {
@@ -20,5 +21,28 @@ namespace SplatoonGameLibrary
         private readonly GameBoard Board;
 
         public SquareStatus CurrentStatus { get; private set; }
+
+        public void ApplyTeamColor(Player p)
+        {
+            // Given a player
+
+            Monitor.Wait(CurrentStatus);
+            try
+            {
+                if (Monitor.IsEntered(CurrentStatus))
+                {
+                    // Lock has been acquired I can do stuff now
+                    // Call a method to change the team holding this
+                    CurrentStatus.ChangeSquareOwnership(p.PlayerTeam);
+                }
+            }
+            catch (Exception e)
+            { }
+            finally
+            {
+                Monitor.Exit(CurrentStatus);
+                Monitor.PulseAll(CurrentStatus);
+            }
+        }
     }
 }

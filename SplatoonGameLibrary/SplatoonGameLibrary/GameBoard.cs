@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using System.Timers;
+using System.Threading;
 
 namespace SplatoonGameLibrary
 {
@@ -12,7 +13,7 @@ namespace SplatoonGameLibrary
 
         private List<Team> Teams;
         
-        private readonly Timer LockingTimer;
+        private readonly System.Timers.Timer LockingTimer;
 
         /// <summary>
         /// Returns a grouping of players per team
@@ -25,6 +26,14 @@ namespace SplatoonGameLibrary
                         .GroupBy(x => x.PlayerTeam)
                         .Single();
 
+            return group;
+        }
+
+        public IGrouping<Team, GameSquare> GetFinalBoard()
+        {
+            var group = Squares
+                        .GroupBy(x => x.CurrentStatus.Team)
+                        .Single();
             return group;
         }
 
@@ -45,18 +54,28 @@ namespace SplatoonGameLibrary
             {
                 // Create all the teams
                 // For simple testing reasons if i is 0 their color is Yellow
-                Teams.Add(new Team(playersPerTeam, (i == 0 ? Yellow: Pink) ));
+                Teams.Add(new Team(playersPerTeam, (i == 0 ? Yellow: Pink), this));
             }
-
-
+            
             // Setup the universal locking/unlocking timer
-            LockingTimer = new Timer
+            LockingTimer = new System.Timers.Timer
             {
                 AutoReset = true,
                 Interval = 150, // Something extremely low, this timer needs to run fast enough to simulate all the blocks having timers
                 Enabled = true
             };
             LockingTimer.Elapsed += LockingTimerHasTicked;
+        }
+        
+        public GameSquare FindNextAvailableSquare(Player p)
+        {
+            
+            // Given the current player
+            // Find the next available square to travel to
+            // Will use the current players pos to attempt to find squares that are close
+            // This doesn't check for locked vs. unlocked
+            // rather will find a square that isn't already being waited on by another player
+            return null;
         }
 
         private void LockingTimerHasTicked(object sender, ElapsedEventArgs e)
@@ -65,7 +84,7 @@ namespace SplatoonGameLibrary
             foreach (var sqr in Squares)
             {
                 // Wrap this in a lock because by doing this I can stop players from reading it while it's being updated
-                lock (sqr)
+                lock (sqr.CurrentStatus)
                 {
                     if (sqr.CurrentStatus.LockingTime < DateTime.Now)
                     {
@@ -76,6 +95,9 @@ namespace SplatoonGameLibrary
                         sqr.CurrentStatus.LockingTime = sqr.CurrentStatus.LockingTime.Add(TimeSpan.FromMilliseconds(SquareStatus.GenerateNextDelay()));
                     }
                 }
+
+                // Send out a notify event stating that something has changed
+                Monitor.PulseAll(sqr.CurrentStatus);
             }
         }
 

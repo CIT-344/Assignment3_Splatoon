@@ -7,17 +7,22 @@ namespace SplatoonGameLibrary
     public class Team
     {
 
-        public Team(int PlayerCount, Color TeamColor)
+        public Team(int PlayerCount, Color TeamColor, GameBoard board)
         {
             PopulatePlayers(PlayerCount);
             this.TeamColor = TeamColor;
+            this.Board = board;
         }
+
+        // A reference to the gameBoard that created this team
+        // Used to allow players to interact with the squares on the board
+        public readonly GameBoard Board;
 
         public readonly Guid TeamID;
 
         public List<Player> Players { get; private set; }
         
-        private readonly Color TeamColor;
+        public Color TeamColor { get; private set; }
 
         private void PopulatePlayers(int n)
         {
@@ -28,11 +33,6 @@ namespace SplatoonGameLibrary
                 // Do player creation
                 Players.Add(new Player(this));
             }
-        }
-
-        public Color GetTeamColor()
-        {
-            return TeamColor;
         }
     }
 }
