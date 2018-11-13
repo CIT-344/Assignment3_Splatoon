@@ -13,7 +13,7 @@ namespace SplatoonGameLibrary
 
         public readonly char Identifier;
 
-        public Color(byte Alpha, byte Blue, byte Red, byte Green, char Letter)
+        public Color(byte Alpha, byte Red, byte Green, byte Blue, char Letter)
         {
             this.A = Alpha;
             this.B = Blue;

@@ -15,26 +15,18 @@ namespace SplatoonGameLibrary
 
         public readonly Guid TeamID;
 
-        public List<Player> Players
-        {
-            get
-            {
-                return _Players;
-            }
-        }
-        
-        private List<Player> _Players;
+        public List<Player> Players { get; private set; }
         
         private readonly Color TeamColor;
 
         private void PopulatePlayers(int n)
         {
-            _Players = new List<Player>(n);
+            Players = new List<Player>(n);
 
             for (int i = 0; i < n; i++)
             {
                 // Do player creation
-                _Players.Add(new Player(this));
+                Players.Add(new Player(this));
             }
         }
 
