@@ -10,6 +10,8 @@ namespace SplatoonGameLibrary
         public SquareStatus()
         {
             LockingTime = LockingTime.Add(TimeSpan.FromMilliseconds(GenerateNextDelay()));
+            var roundNumber = DelayGenerator.Next(0, 101);
+            IsLocked = false;//(roundNumber < 49);
         }
 
         private static Random DelayGenerator = new Random();
@@ -18,14 +20,14 @@ namespace SplatoonGameLibrary
 
         public Team Team { get; private set; } = null;
 
-        public bool IsLocked = true;
+        public bool IsLocked = false;
 
         public DateTime LockingTime = DateTime.Now;
 
         public static int GenerateNextDelay()
         {
             // The delay can be between 250ms up to 1000 ms
-            return SquareStatus.DelayGenerator.Next(250, 1001);
+            return SquareStatus.DelayGenerator.Next(500, 1001);
         }
 
         public void ChangeSquareOwnership(Team t)
