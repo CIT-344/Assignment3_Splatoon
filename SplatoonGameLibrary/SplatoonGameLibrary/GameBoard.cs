@@ -14,23 +14,10 @@ namespace SplatoonGameLibrary
         private readonly List<GameSquare> Squares;
         public bool GameIsRunning;
         private Task SimulatedTimerThread;
-        private CancellationTokenSource StopTimerRequest = new CancellationTokenSource();
+        public readonly CancellationTokenSource StopTimerRequest = new CancellationTokenSource();
 
         private List<Team> Teams;
         
-        /// <summary>
-        /// Returns a grouping of players per team
-        /// </summary>
-        /// <returns>A grouping of players per team</returns>
-        public IEnumerable<IGrouping<Team, Player>> GetAllPlayers()
-        {
-            var group = Teams
-                        .SelectMany(x => x.Players)
-                        .GroupBy(x => x.PlayerTeam);
-
-            return group;
-        }
-
         public IEnumerable<IGrouping<Team, GameSquare>> GetFinalBoard()
         {
             var group = Squares
@@ -38,7 +25,7 @@ namespace SplatoonGameLibrary
             return group;
         }
 
-        public GameBoard(int sizeSquare, int numTeams, int playersPerTeam)
+        public GameBoard(int sizeSquare, int numTeams, int playersPerTeam, TimeSpan GameLength)
         {
             Squares = new List<GameSquare>((int)Math.Pow(sizeSquare, 2)); // Just a hint to the list of the total size
             // Something like 5 means 5^2 = 25 squares total
@@ -63,23 +50,44 @@ namespace SplatoonGameLibrary
             SimulatedTimerThread = Task.Run(()=> 
             {
                 BeginSimulatedTimer(TimeSpan.FromMilliseconds(100));
-            }, StopTimerRequest.Token);
 
+                // End the Game State
+                GameIsRunning = false;
+
+            }, StopTimerRequest.Token);
+        
+            // Once the game is setup and running stop it after the GameLength
+            StopTimerRequest.CancelAfter(GameLength);
+        }
+
+        public void StartGame()
+        {
             GameIsRunning = true;
+            foreach (var player in Teams.SelectMany(x=>x.Players))
+            {
+                Debug.WriteLine($"Player on Team {player.PlayerTeam.TeamColor.Identifier} has started moving");
+                player.StartMoving();
+            }
         }
         
         public GameSquare FindNextAvailableSquare(Player p)
         {
             // Given the current player
             // Find the first Square that doesn't already have a player waiting
-            var OrderedSquares = Squares.Where(x => x.PlayerWaiting == false);
+            // Order the squares to find all the clear ones first
+            var OrderedSquares = Squares
+                .Where(x => x.PlayerWaiting == false)
+                .OrderByDescending(x=>x.CurrentStatus.IsClear);
 
             foreach (var sqr in OrderedSquares)
             {
                 // Find a square that isn't already owned by this player's team
                 if (sqr.CurrentStatus.Team != p.PlayerTeam)
                 {
-                    return sqr;
+                    if (sqr.X != p.X && sqr.Y != p.Y)
+                    {
+                        return sqr;
+                    }
                 }
             }
 
@@ -88,11 +96,17 @@ namespace SplatoonGameLibrary
 
         private void BeginSimulatedTimer(TimeSpan Interval)
         {
-            while (true && !StopTimerRequest.Token.IsCancellationRequested)
+            while (!StopTimerRequest.Token.IsCancellationRequested)
             {
                 // ForEach square in Squares
                 foreach (var sqr in Squares)
                 {
+                    // Before doing anything just check if the game is ending and needs to break this loop
+                    if (StopTimerRequest.Token.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
                     var dtRef = DateTime.Now;
                     var lockRef = sqr.CurrentStatus.LockingTime;
 
@@ -140,6 +154,8 @@ namespace SplatoonGameLibrary
                     Monitor.Exit(sqr.CurrentStatus.IsLocked);
                 }
             }
+
+            
         }
 
         public readonly Color Yellow = new Color(0, 255, 255, 0, 'Y');
