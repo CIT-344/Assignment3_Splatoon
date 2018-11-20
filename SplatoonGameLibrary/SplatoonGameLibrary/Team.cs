@@ -12,6 +12,7 @@ namespace SplatoonGameLibrary
             PopulatePlayers(PlayerCount);
             this.TeamColor = TeamColor;
             this.Board = board;
+            TeamID = Guid.NewGuid();
         }
 
         // A reference to the gameBoard that created this team

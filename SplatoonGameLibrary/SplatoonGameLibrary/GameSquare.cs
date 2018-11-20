@@ -34,7 +34,7 @@ namespace SplatoonGameLibrary
             {
                 PlayerWaiting = true;
             }
-
+            
             // Apply waiting logic here
             // Player thread will block here until the color my be changed
             // This CurrentStatus can be locked in the SimulatedTimerThread
@@ -46,8 +46,14 @@ namespace SplatoonGameLibrary
                 p.X = X;
                 p.Y = Y;
 
+
+                Board.NotifyColorChanged(CurrentStatus.Team.TeamColor, X, Y);
+
                 PlayerWaiting = false;
             }
+
+            
+
         }
     }
 }
